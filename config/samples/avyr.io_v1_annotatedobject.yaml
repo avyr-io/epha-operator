@@ -1,0 +1,12 @@
+apiVersion: epha.avyr.io/v1
+kind: AnnotatedObject
+metadata:
+  labels:
+    app.kubernetes.io/name: annotatedobject
+    app.kubernetes.io/instance: annotatedobject-sample
+    app.kubernetes.io/part-of: epha
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: epha
+  name: annotatedobject-sample
+spec:
+  # TODO(user): Add fields here

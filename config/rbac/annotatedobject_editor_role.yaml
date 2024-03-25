@@ -1,0 +1,31 @@
+# permissions for end users to edit annotatedobjects.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: annotatedobject-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: epha
+    app.kubernetes.io/part-of: epha
+    app.kubernetes.io/managed-by: kustomize
+  name: annotatedobject-editor-role
+rules:
+  - apiGroups:
+      - epha.avyr.io
+    resources:
+      - annotatedobjects
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - epha.avyr.io
+    resources:
+      - annotatedobjects/status
+    verbs:
+      - get

@@ -1,0 +1,45 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - epha.avyr.io
+  resources:
+  - annotatedobjects
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - epha.avyr.io
+  resources:
+  - annotatedobjects/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - epha.avyr.io
+  resources:
+  - annotatedobjects/status
+  verbs:
+  - get
+  - patch
+  - update

@@ -1,0 +1,13 @@
+apiVersion: epha.avyr.io/v1
+kind: AnnotatedObject
+metadata:
+  name: busybox-annotated
+  namespace: monitoring
+spec:
+  targets:
+    - kind: Deployment
+      name: busybox
+      namespace: monitoring
+      metadata:
+        annotations:
+          example.com/annotation: "test-value"
