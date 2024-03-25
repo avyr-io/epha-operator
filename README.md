@@ -14,12 +14,15 @@ metadata:
 spec:
   targets:
     - kind: Deployment
+      apiVersion: apps/v1
       name: my-deployment
       namespace: monitoring
       metadata:
         annotations:
           example.com/annotation: "test-value"
 ```
+
+Deletion of annotations are not implemented, annotations are written and maintained by the operator but the clean up will still be manual.
 
 ## Getting Started
 
