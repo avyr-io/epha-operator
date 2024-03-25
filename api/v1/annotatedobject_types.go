@@ -24,15 +24,11 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 // TargetResource defines the Kubernetes resource to be annotated.
 type TargetResource struct {
-	// Kind is the type of Kubernetes resource (e.g., Deployment, Service, etc.)
-	Kind string `json:"kind"`
-
-	// Name is the name of the resource.
-	Name string `json:"name"`
-
-	// Namespace is the namespace of the resource. Optional if the resource is not namespaced.
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	// Adding APIVersion to capture the group and version
+	APIVersion string `json:"apiVersion"`
+	Kind       string `json:"kind"`
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace,omitempty"`
 }
 
 // AnnotatedObjectSpec defines the desired state of AnnotatedObject

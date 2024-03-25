@@ -45,9 +45,10 @@ spec:
                   to each.
                 items:
                   properties:
+                    apiVersion:
+                      description: Adding APIVersion to capture the group and version
+                      type: string
                     kind:
-                      description: Kind is the type of Kubernetes resource (e.g.,
-                        Deployment, Service, etc.)
                       type: string
                     metadata:
                       description: Metadata contains the annotations and potentially
@@ -63,13 +64,11 @@ spec:
                       - annotations
                       type: object
                     name:
-                      description: Name is the name of the resource.
                       type: string
                     namespace:
-                      description: Namespace is the namespace of the resource. Optional
-                        if the resource is not namespaced.
                       type: string
                   required:
+                  - apiVersion
                   - kind
                   - metadata
                   - name

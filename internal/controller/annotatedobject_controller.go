@@ -18,15 +18,17 @@ package controller
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	avyriov1 "github.com/avyr-io/epha/api/v1"
@@ -35,23 +37,13 @@ import (
 // AnnotatedObjectReconciler reconciles a AnnotatedObject object
 type AnnotatedObjectReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	DynamicClient dynamic.Interface
+	Scheme        *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=epha.avyr.io,resources=annotatedobjects,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=epha.avyr.io,resources=annotatedobjects/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=epha.avyr.io,resources=annotatedobjects/finalizers,verbs=update
-
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the AnnotatedObject object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
-
 //+kubebuilder:rbac:groups=apps,resources=deployments;replicasets,verbs=get;list;watch;create;update;patch;delete
 
 func (r *AnnotatedObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -68,7 +60,7 @@ func (r *AnnotatedObjectReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Example: Process each target specified in the AnnotatedObject
 	for _, target := range annotatedObject.Spec.Targets {
-		if err := r.reconcileTarget(ctx, target); err != nil {
+		if err := r.reconcileTargetDynamic(ctx, target); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -76,40 +68,45 @@ func (r *AnnotatedObjectReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *AnnotatedObjectReconciler) reconcileTarget(ctx context.Context, target avyriov1.TargetResourceWithMetadata) error {
-	var err error
-
-	switch target.Kind {
-	case "Deployment":
-		var deployment appsv1.Deployment
-		err = r.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, &deployment)
-		if err != nil {
-			return err
-		}
-		mergeAnnotations(&deployment.ObjectMeta, target.Metadata.Annotations)
-		err = r.Update(ctx, &deployment)
-	case "ReplicaSet":
-		var replicaSet appsv1.ReplicaSet
-		err = r.Get(ctx, types.NamespacedName{Name: target.Name, Namespace: target.Namespace}, &replicaSet)
-		if err != nil {
-			return err
-		}
-		mergeAnnotations(&replicaSet.ObjectMeta, target.Metadata.Annotations)
-		err = r.Update(ctx, &replicaSet)
-	default:
-		return fmt.Errorf("unsupported kind: %s", target.Kind)
+func (r *AnnotatedObjectReconciler) reconcileTargetDynamic(ctx context.Context, target avyriov1.TargetResourceWithMetadata) error {
+	// Split the APIVersion to group and version
+	parts := strings.SplitN(target.APIVersion, "/", 2)
+	group := ""
+	version := parts[0]
+	if len(parts) == 2 {
+		group = parts[0]
+		version = parts[1]
 	}
 
+	// Construct the GVR
+	gvr := schema.GroupVersionResource{Group: group, Version: version, Resource: strings.ToLower(target.Kind) + "s"}
+
+	// Use dynamic client
+	dynClient, err := dynamic.NewForConfig(config.GetConfigOrDie())
+	if err != nil {
+		return err
+	}
+
+	// Fetch the target resource
+	resource, err := dynClient.Resource(gvr).Namespace(target.Namespace).Get(ctx, target.Name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// Update annotations on the unstructured object
+	annotations := target.Metadata.Annotations
+	unstructuredAnnotations := resource.GetAnnotations()
+	if unstructuredAnnotations == nil {
+		unstructuredAnnotations = make(map[string]string)
+	}
+	for key, value := range annotations {
+		unstructuredAnnotations[key] = value
+	}
+	resource.SetAnnotations(unstructuredAnnotations)
+
+	// Update the resource with the new annotations
+	_, err = dynClient.Resource(gvr).Namespace(target.Namespace).Update(ctx, resource, metav1.UpdateOptions{})
 	return err
-}
-
-func mergeAnnotations(meta *metav1.ObjectMeta, newAnnotations map[string]string) {
-	if meta.Annotations == nil {
-		meta.Annotations = make(map[string]string)
-	}
-	for key, value := range newAnnotations {
-		meta.Annotations[key] = value
-	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
