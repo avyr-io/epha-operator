@@ -5,7 +5,7 @@ Epha is a Kubernetes Operator to maintain annotations across targets in a cluste
 ## Description
 
 Epha works by utilizing an `AnnotatedObject` resource and reconciling the described objects with the specified metadata:
-```
+```yaml
 apiVersion: avyr.io/v1
 kind: AnnotatedObject
 metadata:
